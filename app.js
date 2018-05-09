@@ -8,8 +8,12 @@ const logger = require('morgan');
 const cors = require('cors');
 const mongoose = require('mongoose');
 
+const session = require('express-session');
+const MongoStore = require('connect-mongo')(session);
+
 const indexRouter = require('./routes/index');
 const movies = require('./routes/movies');
+const auth = require('./routes/auth');
 
 const app = express();
 
@@ -19,10 +23,27 @@ mongoose.connect('mongodb://localhost/movies-mean', {
   reconnectTries: Number.MAX_VALUE
 });
 
+// midelwares
+
 app.use(cors({
   credentials: true,
   origin: ['http://localhost:4200']
 }));
+
+// session setup
+app.use(session({
+  store: new MongoStore({
+    mongooseConnection: mongoose.connection,
+    ttl: 24 * 60 * 60 // 1 day
+  }),
+  secret: 'some-string',
+  resave: true,
+  saveUninitialized: true,
+  cookie: {
+    maxAge: 24 * 60 * 60 * 1000
+  }
+}));
+
 
 app.use(logger('dev'));
 app.use(express.json());
@@ -31,6 +52,7 @@ app.use(cookieParser());
 
 app.use('/', indexRouter);
 app.use('/movies', movies);
+app.use('/auth', auth);
 
 
 // catch 404 and forward to error handler
